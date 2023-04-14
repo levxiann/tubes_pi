@@ -3,10 +3,10 @@ from django.db import models
 # Create your models here.
 class User(models.Model):
     class LoginLevel(models.TextChoices):
-        SUPERADMIN = "SA", _("Super Admin")
-        ADMIN = "A", _("Admin")
-        EMPLOYEE = "E", _("Employee")
-        CUSTOMER = "C", _("Customer")
+        SUPERADMIN = "SA", "Super Admin"
+        ADMIN = "A", "Admin"
+        EMPLOYEE = "E", "Employee"
+        CUSTOMER = "C", "Customer"
 
     name = models.CharField(max_length = 100)
     email = models.EmailField(max_length = 100, unique = True)
@@ -36,13 +36,13 @@ class Shop(models.Model):
         ordering = ('name',)
 
 class ShopPosition(models.Model):
-    user = models.ForeignKey(User, on_update=models.CASCADE)
-    shop = models.ForeignKey(Shop, on_update=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
 
 class Product(models.Model):
     name = models.CharField(max_length = 100)
-    shop = models.ForeignKey(Shop, on_update=models.CASCADE)
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
     price = models.BigIntegerField()
     stock = models.IntegerField()
     status = models.BooleanField(default=False)
@@ -57,19 +57,19 @@ class Product(models.Model):
 
 class Payment(models.Model):
     class PaymentType(models.TextChoices):
-        CASH = "CA", _("Cash")
-        CREDIT = "CR", _("Credit")
-        DEBIT = "DE", _("Debit")
-        OVO = "O", _("Ovo")
-        GOPAY = "G", _("Gopay")
-        DANA = "D", _("Dana")
+        CASH = "CA", "Cash"
+        CREDIT = "CR", "Credit"
+        DEBIT = "DE", "Debit"
+        OVO = "O", "Ovo"
+        GOPAY = "G", "Gopay"
+        DANA = "D", "Dana"
     
     class PaymentStatus(models.TextChoices):
-        PAID = "P", _("Paid")
-        NOTPAID = "NP", _("Not Paid")
+        PAID = "P", "Paid"
+        NOTPAID = "NP", "Not Paid"
 
-    user = models.ForeignKey(User, on_update=models.CASCADE)
-    shop = models.ForeignKey(Shop, on_update=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
     payment_type = models.CharField(max_length = 2, choices = PaymentType.choices) 
     total_price = models.BigIntegerField()
     payment_date = models.DateTimeField(null = True)
@@ -80,8 +80,8 @@ class Payment(models.Model):
         return str(self.id)
 
 class PaymentDetail(models.Model):
-    payment = models.ForeignKey(Payment, on_update=models.CASCADE)
-    product = models.ForeignKey(Product, on_update=models.CASCADE)
+    payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.IntegerField()
     price = models.BigIntegerField()
     created = models.DateTimeField(auto_now_add=True)
