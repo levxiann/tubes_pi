@@ -11,6 +11,7 @@ class User(models.Model):
     name = models.CharField(max_length = 100)
     email = models.EmailField(max_length = 100, unique = True)
     username = models.CharField(max_length = 50, unique = True)
+    password = models.CharField(max_length = 100, null = True)
     phone_number = models.CharField(max_length = 20, unique = True)
     level = models.CharField(max_length = 2, choices = LoginLevel.choices, default = LoginLevel.CUSTOMER)
     status = models.BooleanField(default=False)
@@ -27,7 +28,6 @@ class Shop(models.Model):
     location = models.CharField(max_length = 255)
     status = models.BooleanField(default=False)
     created = models.DateTimeField(auto_now_add=True)
-    employees = models.ManyToManyField(User, through="ShopPosition")
 
     def __str__(self):
         return self.name
