@@ -76,6 +76,8 @@ class Payment(models.Model):
     status = models.CharField(max_length = 2, choices = PaymentStatus.choices, default = PaymentStatus.NOTPAID) 
     created = models.DateTimeField(auto_now_add=True)
 
+    products = models.ManyToManyField(Product, through="PaymentDetail")
+
     def __str__(self):
         return str(self.id)
 
