@@ -48,8 +48,8 @@ class ShopSerializer(serializers.Serializer):
 
 class ShopPositionSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
-    user = serializers.IntegerField()
-    shop = serializers.IntegerField()
+    user = UserSerializer()
+    shop = ShopSerializer()
 
     def create(self, validated_data):
         return ShopPosition.objects.create(**validated_data)
@@ -60,10 +60,10 @@ class ShopPositionSerializer(serializers.Serializer):
         instance.save()
         return instance
 
-class Product(serializers.Serializer):
+class ProductSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
     name = serializers.CharField(max_length=100)
-    shop = serializers.IntegerField()
+    shop = ShopSerializer()
     price = serializers.IntegerField()
     stock = serializers.IntegerField()
     status = serializers.BooleanField(default = False)
@@ -82,10 +82,10 @@ class Product(serializers.Serializer):
         instance.save()
         return instance
 
-class Payment(serializers.Serializer):
+class PaymentSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
-    user = serializers.IntegerField()
-    shop = serializers.IntegerField()
+    user = UserSerializer()
+    shop = ShopSerializer()
     payment_type = serializers.ChoiceField(choices = [("CA", "Cash"), ("CR", "Credit"), ("DE", "Debit"), ("O", "Ovo"), ("G", "Gopay"), ("D", "Dana"),])
     total_price = serializers.IntegerField()
     payment_date = serializers.DateTimeField()
@@ -104,10 +104,10 @@ class Payment(serializers.Serializer):
         instance.save()
         return instance
 
-class PaymentDetail(serializers.Serializer):
+class PaymentDetailSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
-    payment = serializers.IntegerField()
-    product = serializers.IntegerField()
+    payment = PaymentSerializer()
+    product = ProductSerializer()
     quantity = serializers.IntegerField()
     price = serializers.IntegerField()
 
