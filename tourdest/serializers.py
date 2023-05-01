@@ -48,15 +48,23 @@ class ShopSerializer(serializers.Serializer):
 
 class ShopPositionSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
-    user = UserSerializer()
-    shop = ShopSerializer()
+    user = UserSerializer(read_only = True)
+    shop = ShopSerializer(read_only = True)
 
     def create(self, validated_data):
+        user_id = self.initial_data.get("user")
+        validated_data["user_id"] = user_id
+        shop_id = self.initial_data.get("shop")
+        validated_data["shop_id"] = shop_id
         return ShopPosition.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        instance.user = validated_data.get('user', instance.user)
-        instance.shop = validated_data.get('shop', instance.shop)
+        user_id = self.initial_data.get("user")
+        shop_id = self.initial_data.get("shop")
+        if user_id:
+            instance.user_id = user_id
+        if shop_id:
+            instance.shop_id = shop_id
         instance.save()
         return instance
 

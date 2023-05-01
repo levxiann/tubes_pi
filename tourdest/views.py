@@ -26,6 +26,76 @@ class JSONResponse(HttpResponse):
         super(JSONResponse, self).__init__(content, **kwargs)
 
 @csrf_exempt
+def user_list(request, lev = "all", stat = "all"):
+    if request.method == 'GET':
+        if stat == "all":
+            if lev == "all":
+                users = User.objects.all()
+                users_serializer = UserSerializer(users, many=True)
+                return JSONResponse(users_serializer.data)
+            else:
+                users = User.objects.all().filter(level = lev)
+                users_serializer = UserSerializer(users, many=True)
+                return JSONResponse(users_serializer.data)
+        elif stat == "true":
+            if lev == "all":
+                users = User.objects.all().filter(status = True)
+                users_serializer = UserSerializer(users, many=True)
+                return JSONResponse(users_serializer.data)
+            else:
+                users = User.objects.all().filter(status = True, level = lev)
+                users_serializer = UserSerializer(users, many=True)
+                return JSONResponse(users_serializer.data)
+        elif stat == "false":
+            if lev == "all":
+                users = User.objects.all().filter(status = False)
+                users_serializer = UserSerializer(users, many=True)
+                return JSONResponse(users_serializer.data)
+            else:
+                users = User.objects.all().filter(status = False, level = lev)
+                users_serializer = UserSerializer(users, many=True)
+                return JSONResponse(users_serializer.data)
+
+    elif request.method == 'POST':
+        user_data = JSONParser().parse(request)
+        user_serializer = UserSerializer(data=user_data)
+        if user_serializer.is_valid():
+            user_serializer.save()
+            return JSONResponse(user_serializer.data, status=status.HTTP_201_CREATED)
+        return JSONResponse(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+def user_detail(request, pk):
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        user_serializer = UserSerializer(user)
+        return JSONResponse(user_serializer.data)
+
+    elif request.method == 'PUT':
+        user_data = JSONParser().parse(request)
+        user_serializer = UserSerializer(user, data=user_data)
+        if user_serializer.is_valid():
+            user_serializer.save()
+            return JSONResponse(user_serializer.data)
+        return JSONResponse(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'PATCH':
+        user_data = JSONParser().parse(request)
+        user_serializer = UserSerializer(user, data=user_data, partial=True)
+        if user_serializer.is_valid():
+            user_serializer.save()
+            return JSONResponse(user_serializer.data)
+        return JSONResponse(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        user.delete()
+        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+
+@csrf_exempt
 def shop_list(request, stat = "all"):
     if request.method == 'GET':
         if stat == "all":
@@ -83,6 +153,59 @@ def shop_detail(request, pk, stat = "all"):
 
     elif request.method == 'DELETE':
         shop.delete()
+        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+
+@csrf_exempt
+def shoppos_list(request):
+    if request.method == 'GET':
+            shoppos = ShopPosition.objects.all()
+            shoppos_serializer = ShopPositionSerializer(shoppos, many=True)
+            return JSONResponse(shoppos_serializer.data)
+
+    elif request.method == 'POST':
+        shoppos_data = JSONParser().parse(request)
+        shoppos_serializer = ShopPositionSerializer(data=shoppos_data)
+        if shoppos_serializer.is_valid():
+            shoppos_serializer.save()
+            return JSONResponse(shoppos_serializer.data, status=status.HTTP_201_CREATED)
+        return JSONResponse(shoppos_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+def shoppos_get(request, shop):
+    if request.method == 'GET':
+        shoppos = ShopPosition.objects.all().filter(shop_id = shop)
+        shoppos_serializer = ShopPositionSerializer(shoppos, many=True)
+        return JSONResponse(shoppos_serializer.data)
+
+@csrf_exempt
+def shoppos_detail(request, pk):
+    try:
+        shoppos = ShopPosition.objects.get(pk=pk)
+    except Product.DoesNotExist:
+        return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        shoppos_serializer = ShopPositionSerializer(shoppos)
+        return JSONResponse(shoppos_serializer.data)
+
+    elif request.method == 'PUT':
+        shoppos_data = JSONParser().parse(request)
+        shoppos_serializer = ShopPositionSerializer(shoppos, data=shoppos_data)
+        if shoppos_serializer.is_valid():
+            shoppos_serializer.save()
+            return JSONResponse(shoppos_serializer.data)
+        return JSONResponse(shoppos_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'PATCH':
+        shoppos_data = JSONParser().parse(request)
+        shoppos_serializer = ShopPositionSerializer(shoppos, data=shoppos_data, partial = True)
+        if shoppos_serializer.is_valid():
+            shoppos_serializer.save()
+            return JSONResponse(shoppos_serializer.data)
+        return JSONResponse(shoppos_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        shoppos.delete()
         return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
 @csrf_exempt
