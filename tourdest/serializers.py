@@ -5,6 +5,7 @@ from tourdest.models import ShopPosition
 from tourdest.models import Product
 from tourdest.models import Payment
 from tourdest.models import PaymentDetail
+from django.contrib.auth.hashers import make_password
 
 class UserSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
@@ -17,18 +18,27 @@ class UserSerializer(serializers.Serializer):
     status = serializers.BooleanField(default = False)
 
     def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        if password is not None:
+            validated_data['password'] = make_password(password)
         return User.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         instance.name = validated_data.get('name', instance.name)
         instance.email = validated_data.get('email', instance.email)
         instance.username = validated_data.get('username', instance.username)
-        instance.password = validated_data.get('password', instance.password)
+        password = validated_data.get('password', None)
+        if password is not None:
+            instance.password = make_password(password)
         instance.phone_number = validated_data.get('phone_number', instance.phone_number)
         instance.level = validated_data.get('level', instance.level)
         instance.status = validated_data.get('status', instance.status)
         instance.save()
         return instance
+
+class UserLoginSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=50)
+    password = serializers.CharField(max_length=100, write_only=True)
 
 class ShopSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
