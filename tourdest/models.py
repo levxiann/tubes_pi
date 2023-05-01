@@ -1,7 +1,8 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
-class User(models.Model):
+class User(AbstractUser):
     class LoginLevel(models.TextChoices):
         SUPERADMIN = "SA", "Super Admin"
         ADMIN = "A", "Admin"
