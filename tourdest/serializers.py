@@ -60,16 +60,17 @@ class ShopPositionSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
     user = UserSerializer(read_only = True)
     shop = ShopSerializer(read_only = True)
+    user_id_input = serializers.IntegerField(write_only=True)
 
     def create(self, validated_data):
-        user_id = self.initial_data.get("user")
+        user_id = validated_data.pop("user_id_input")
         validated_data["user_id"] = user_id
         shop_id = self.initial_data.get("shop")
         validated_data["shop_id"] = shop_id
         return ShopPosition.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        user_id = self.initial_data.get("user")
+        user_id = validated_data.pop("user_id_input", None)
         shop_id = self.initial_data.get("shop")
         if user_id:
             instance.user_id = user_id
@@ -77,6 +78,40 @@ class ShopPositionSerializer(serializers.Serializer):
             instance.shop_id = shop_id
         instance.save()
         return instance
+    
+    def save(self):
+        # check if the instance already exists in the database
+        if self.instance:
+            # get the previous user from the database
+            prev_user = self.instance.user
+            # get the current user from the validated data
+            user = User.objects.get(id=self.validated_data.get("user_id_input"))
+            # update the status of the user if it has changed
+            if user and user != prev_user:
+                prev_user.status = False
+                prev_user.save(update_fields=["status"])
+                user.status = True
+                user.save(update_fields=["status"])
+        else:
+            # get the user from the validated data
+            user = User.objects.get(id=self.validated_data.get("user_id_input"))
+            # set the status of the user to true for a new instance
+            if user:
+                user.status = True
+                user.save(update_fields=["status"])
+        # call the super method to save the instance
+        return super().save()
+    
+    def delete(self):
+        # get the shop position instance
+        shop_position = self.get_object()
+        # get the user from the instance
+        user = shop_position.user
+        # set the status of the user to false
+        user.status = False
+        user.save(update_fields=["status"])
+        # call the super method to delete the instance
+        super().delete()
 
 class ProductSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
@@ -173,3 +208,13 @@ class PaymentDetailSerializer(serializers.Serializer):
             product.stock -= instance.quantity
         product.save()
         return instance
+    
+    def delete(self, *args, **kwargs):
+        # get the product and quantity from the instance
+        product = self.instance.product
+        quantity = self.instance.quantity
+        # increase the product stock by the quantity
+        product.stock += quantity
+        product.save()
+        # call the super method to delete the instance
+        super().delete(*args, **kwargs)

@@ -33,7 +33,7 @@ class JSONResponse(HttpResponse):
         super(JSONResponse, self).__init__(content, **kwargs)
 
 @csrf_exempt
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def user_list(request, lev = "all", stat = "all"):
@@ -67,11 +67,22 @@ def user_list(request, lev = "all", stat = "all"):
                 users = User.objects.all().filter(status = False, level = lev)
                 users_serializer = UserSerializer(users, many=True)
                 return JSONResponse(users_serializer.data)
+    elif request.method == 'POST':
+        if request.user.level != "A" and request.user.level != "SA":
+            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
+        user_data = JSONParser().parse(request)
+        user_serializer = UserSerializer(data=user_data)
+        if user_serializer.is_valid():
+            user = user_serializer.save()
+            token, created = Token.objects.get_or_create(user=user)
+            return JSONResponse({'data':user_serializer.data, 'token': token.key}, status=status.HTTP_201_CREATED)
+        return JSONResponse(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
 def user_create(request):
     if request.method == 'POST':
         user_data = JSONParser().parse(request)
+        user_data['level'] = 'C'
         user_serializer = UserSerializer(data=user_data)
         if user_serializer.is_valid():
             user = user_serializer.save()
@@ -147,6 +158,8 @@ def user_detail(request, pk):
 @permission_classes([IsAuthenticated])
 def shop_list(request, stat = "all"):
     if request.method == 'GET':
+        if request.user.level != "C" and request.user.level != "SA":
+            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         if stat == "all":
             shops = Shop.objects.all()
             shops_serializer = ShopSerializer(shops, many=True)
@@ -247,6 +260,16 @@ def shoppos_get(request, shop):
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         shoppos = ShopPosition.objects.all().filter(shop_id = shop)
         shoppos_serializer = ShopPositionSerializer(shoppos, many=True)
+        return JSONResponse(shoppos_serializer.data)
+    
+@csrf_exempt
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def shoppos_get_user(request, user):
+    if request.method == 'GET':
+        shoppos = ShopPosition.objects.get(user_id = user)
+        shoppos_serializer = ShopPositionSerializer(shoppos)
         return JSONResponse(shoppos_serializer.data)
 
 @csrf_exempt
@@ -379,7 +402,29 @@ def product_detail(request, pk, stat = "all"):
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         product.delete()
         return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+    
+@csrf_exempt
+@api_view(['PATCH'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def product_stock(request, pk):
+    try:
+        product = Product.objects.get(pk=pk)
+    except Product.DoesNotExist:
+        return HttpResponse(status=status.HTTP_404_NOT_FOUND)
 
+    if request.method == 'PATCH':
+        if request.user.level != "A":
+            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
+        product_data = JSONParser().parse(request)
+        product.stock += product_data['stock']
+        del product_data['stock']
+        product_serializer = ProductSerializer(product, data=product_data, partial = True)
+        if product_serializer.is_valid():
+            product_serializer.save()
+            return JSONResponse(product_serializer.data)
+        return JSONResponse(product_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 @csrf_exempt
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])

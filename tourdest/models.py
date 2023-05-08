@@ -38,12 +38,12 @@ class Shop(models.Model):
 
 class ShopPosition(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
+    shop = models.ForeignKey(Shop, on_delete=models.RESTRICT)
     created = models.DateTimeField(auto_now_add=True)
 
 class Product(models.Model):
     name = models.CharField(max_length = 100)
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
+    shop = models.ForeignKey(Shop, on_delete=models.RESTRICT)
     price = models.BigIntegerField()
     stock = models.IntegerField()
     status = models.BooleanField(default=False)
@@ -69,8 +69,8 @@ class Payment(models.Model):
         PAID = "P", "Paid"
         NOTPAID = "NP", "Not Paid"
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.RESTRICT)
+    shop = models.ForeignKey(Shop, on_delete=models.RESTRICT)
     payment_type = models.CharField(max_length = 2, choices = PaymentType.choices) 
     total_price = models.BigIntegerField()
     payment_date = models.DateTimeField(null = True)
@@ -84,7 +84,7 @@ class Payment(models.Model):
 
 class PaymentDetail(models.Model):
     payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.RESTRICT)
     quantity = models.IntegerField()
     price = models.BigIntegerField()
     created = models.DateTimeField(auto_now_add=True)
