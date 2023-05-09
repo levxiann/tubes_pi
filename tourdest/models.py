@@ -38,12 +38,12 @@ class Shop(models.Model):
 
 class ShopPosition(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    shop = models.ForeignKey(Shop, on_delete=models.RESTRICT)
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
 
 class Product(models.Model):
     name = models.CharField(max_length = 100)
-    shop = models.ForeignKey(Shop, on_delete=models.RESTRICT)
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
     price = models.BigIntegerField()
     stock = models.IntegerField()
     status = models.BooleanField(default=False)
@@ -56,35 +56,24 @@ class Product(models.Model):
     class Meta:
         ordering = ('name',)
 
-class Payment(models.Model):
-    class PaymentType(models.TextChoices):
-        CASH = "CA", "Cash"
-        CREDIT = "CR", "Credit"
-        DEBIT = "DE", "Debit"
-        OVO = "O", "Ovo"
-        GOPAY = "G", "Gopay"
-        DANA = "D", "Dana"
-    
+class Payment(models.Model):    
     class PaymentStatus(models.TextChoices):
         PAID = "P", "Paid"
         NOTPAID = "NP", "Not Paid"
+        REJECTED = "R", "Rejected"
+    
+    class Meta:
+        ordering = ('-pk',)
 
-    user = models.ForeignKey(User, on_delete=models.RESTRICT)
-    shop = models.ForeignKey(Shop, on_delete=models.RESTRICT)
-    payment_type = models.CharField(max_length = 2, choices = PaymentType.choices) 
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.IntegerField()
+    quantity_reject = models.IntegerField(default = 0)
     total_price = models.BigIntegerField()
     payment_date = models.DateTimeField(null = True)
     status = models.CharField(max_length = 2, choices = PaymentStatus.choices, default = PaymentStatus.NOTPAID) 
     created = models.DateTimeField(auto_now_add=True)
 
-    products = models.ManyToManyField(Product, through="PaymentDetail")
-
     def __str__(self):
         return str(self.id)
-
-class PaymentDetail(models.Model):
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.RESTRICT)
-    quantity = models.IntegerField()
-    price = models.BigIntegerField()
-    created = models.DateTimeField(auto_now_add=True)
