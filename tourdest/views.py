@@ -11,14 +11,12 @@ from tourdest.models import Shop
 from tourdest.models import ShopPosition
 from tourdest.models import Product
 from tourdest.models import Payment
-from tourdest.models import PaymentDetail
 from tourdest.serializers import UserSerializer
 from tourdest.serializers import UserLoginSerializer
 from tourdest.serializers import ShopSerializer
 from tourdest.serializers import ShopPositionSerializer
 from tourdest.serializers import ProductSerializer
 from tourdest.serializers import PaymentSerializer
-from tourdest.serializers import PaymentDetailSerializer
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -71,6 +69,7 @@ def user_list(request, lev = "all", stat = "all"):
         if request.user.level != "A" and request.user.level != "SA":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         user_data = JSONParser().parse(request)
+        user_data['status'] = False
         user_serializer = UserSerializer(data=user_data)
         if user_serializer.is_valid():
             user = user_serializer.save()
@@ -83,6 +82,7 @@ def user_create(request):
     if request.method == 'POST':
         user_data = JSONParser().parse(request)
         user_data['level'] = 'C'
+        user_data['status'] = False
         user_serializer = UserSerializer(data=user_data)
         if user_serializer.is_valid():
             user = user_serializer.save()
@@ -268,6 +268,8 @@ def shoppos_get(request, shop):
 @permission_classes([IsAuthenticated])
 def shoppos_get_user(request, user):
     if request.method == 'GET':
+        if request.user.level == "C":
+            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         shoppos = ShopPosition.objects.get(user_id = user)
         shoppos_serializer = ShopPositionSerializer(shoppos)
         return JSONResponse(shoppos_serializer.data)
@@ -321,7 +323,7 @@ def shoppos_detail(request, pk):
 def product_list(request, stat = "all", fk = 0):
     if request.method == 'GET':
         if stat == "all":
-            if fk == 0 :
+            if fk == "0" :
                 products = Product.objects.all()
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
@@ -330,7 +332,7 @@ def product_list(request, stat = "all", fk = 0):
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
         elif stat == "true":
-            if fk == 0:
+            if fk == "0":
                 products = Product.objects.all().filter(status = True)
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
@@ -339,7 +341,7 @@ def product_list(request, stat = "all", fk = 0):
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
         elif stat == "false":
-            if fk == 0 :
+            if fk == "0" :
                 products = Product.objects.all().filter(status = False)
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
@@ -431,7 +433,7 @@ def product_stock(request, pk):
 @permission_classes([IsAuthenticated])
 def payment_list(request, stat = "all"):
     if request.method == 'GET':
-        if request.user.level != "A" and request.user.level != "SA":
+        if request.user.level != "SA":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         if stat == "all":
             payments = Payment.objects.all()
@@ -445,9 +447,17 @@ def payment_list(request, stat = "all"):
             payments = Payment.objects.all().filter(status = "NP")
             payments_serializer = PaymentSerializer(payments, many=True)
             return JSONResponse(payments_serializer.data)
+        elif stat == "rejected":
+            payments = Payment.objects.all().filter(status = "R")
+            payments_serializer = PaymentSerializer(payments, many=True)
+            return JSONResponse(payments_serializer.data)
 
     elif request.method == 'POST':
+        if request.user.level != "C":
+            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         payment_data = JSONParser().parse(request)
+        payment_data['quantity_reject'] = 0
+        payment_data['status'] = 'NP'
         payment_serializer = PaymentSerializer(data=payment_data)
         if payment_serializer.is_valid():
             payment_serializer.save()
@@ -466,6 +476,8 @@ def payment_detail(request, pk, stat = "all"):
             payment = Payment.objects.get(pk=pk, status = "P")
         elif stat == "notpaid":
             payment = Payment.objects.get(pk=pk, status = "NP")
+        elif stat == "rejected":
+            payment = Payment.objects.get(pk=pk, status = "R")
     except Payment.DoesNotExist:
         return HttpResponse(status=status.HTTP_404_NOT_FOUND)
 
@@ -474,8 +486,6 @@ def payment_detail(request, pk, stat = "all"):
         return JSONResponse(payment_serializer.data)
 
     elif request.method == 'PUT':
-        if request.user.level != "A" and request.user.level != "SA":
-            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         payment_data = JSONParser().parse(request)
         payment_serializer = PaymentSerializer(payment, data=payment_data)
         if payment_serializer.is_valid():
@@ -484,8 +494,6 @@ def payment_detail(request, pk, stat = "all"):
         return JSONResponse(payment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'PATCH':
-        if request.user.level != "A" and request.user.level != "SA":
-            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         payment_data = JSONParser().parse(request)
         payment_serializer = PaymentSerializer(payment, data=payment_data, partial = True)
         if payment_serializer.is_valid():
@@ -494,8 +502,9 @@ def payment_detail(request, pk, stat = "all"):
         return JSONResponse(payment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
-        if request.user.level != "A" and request.user.level != "SA":
-            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
+        product = payment.product
+        product.stock += payment.quantity
+        product.save()
         payment.delete()
         return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
@@ -562,78 +571,22 @@ def payment_get(request, user, shop, stat = "all"):
                     payments = Payment.objects.all().filter(shop_id = shop, user_id = user, status = "NP")
                     payments_serializer = PaymentSerializer(payments, many=True)
                     return JSONResponse(payments_serializer.data)
-
-@csrf_exempt
-@api_view(['POST'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def paymentdet_list(request):
-    if request.method == 'POST':
-        paymentdet_data = JSONParser().parse(request)
-        paymentdet_serializer = PaymentDetailSerializer(data=paymentdet_data)
-        if paymentdet_serializer.is_valid():
-            paymentdet_serializer.save()
-            return JSONResponse(paymentdet_serializer.data, status=status.HTTP_201_CREATED)
-        return JSONResponse(paymentdet_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@csrf_exempt
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def paymentdet_get(request, payment, product):
-    if request.method == 'GET':
-        if payment == "0":
-            if product == "0":
-                paymentdets = PaymentDetail.objects.all()
-                paymentdets_serializer = PaymentDetailSerializer(paymentdets, many=True)
-                return JSONResponse(paymentdets_serializer.data)
+        elif stat == "rejected":
+            if user == "0":
+                if shop == "0":
+                    payments = Payment.objects.all().filter(status = "R")
+                    payments_serializer = PaymentSerializer(payments, many=True)
+                    return JSONResponse(payments_serializer.data)
+                else:
+                    payments = Payment.objects.all().filter(shop_id = shop, status = "R")
+                    payments_serializer = PaymentSerializer(payments, many=True)
+                    return JSONResponse(payments_serializer.data)
             else:
-                paymentdets = PaymentDetail.objects.all().filter(product_id = product)
-                paymentdets_serializer = PaymentDetailSerializer(paymentdets, many=True)
-                return JSONResponse(paymentdets_serializer.data)
-        else:
-            if product == "0":
-                paymentdets = PaymentDetail.objects.all().filter(payment_id = payment)
-                paymentdets_serializer = PaymentDetailSerializer(paymentdets, many=True)
-                return JSONResponse(paymentdets_serializer.data)
-            else:
-                paymentdets = PaymentDetail.objects.all().filter(product_id = product, payment_id = payment)
-                paymentdets_serializer = PaymentDetailSerializer(paymentdets, many=True)
-                return JSONResponse(paymentdets_serializer.data)
-
-@csrf_exempt
-@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def paymentdet_detail(request, pk):
-    try:
-        paymentdet = PaymentDetail.objects.get(pk=pk)
-    except PaymentDetail.DoesNotExist:
-        return HttpResponse(status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
-        paymentdet_serializer = PaymentDetailSerializer(paymentdet)
-        return JSONResponse(paymentdet_serializer.data)
-
-    elif request.method == 'PUT':
-        paymentdet_data = JSONParser().parse(request)
-        paymentdet_serializer = PaymentDetailSerializer(paymentdet, data=paymentdet_data)
-        if paymentdet_serializer.is_valid():
-            paymentdet_serializer.save()
-            return JSONResponse(paymentdet_serializer.data)
-        return JSONResponse(paymentdet_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'PATCH':
-        paymentdet_data = JSONParser().parse(request)
-        paymentdet_serializer = PaymentDetailSerializer(paymentdet, data=paymentdet_data, partial = True)
-        if paymentdet_serializer.is_valid():
-            paymentdet_serializer.save()
-            return JSONResponse(paymentdet_serializer.data)
-        return JSONResponse(paymentdet_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        product = paymentdet.product
-        product.stock += paymentdet.quantity
-        product.save()
-        paymentdet.delete()
-        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+                if shop == "0":
+                    payments = Payment.objects.all().filter(user_id = user, status = "R")
+                    payments_serializer = PaymentSerializer(payments, many=True)
+                    return JSONResponse(payments_serializer.data)
+                else:
+                    payments = Payment.objects.all().filter(shop_id = shop, user_id = user, status = "R")
+                    payments_serializer = PaymentSerializer(payments, many=True)
+                    return JSONResponse(payments_serializer.data)

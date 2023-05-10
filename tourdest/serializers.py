@@ -4,7 +4,6 @@ from tourdest.models import Shop
 from tourdest.models import ShopPosition
 from tourdest.models import Product
 from tourdest.models import Payment
-from tourdest.models import PaymentDetail
 from django.contrib.auth.hashers import make_password
 
 class UserSerializer(serializers.Serializer):
@@ -14,7 +13,7 @@ class UserSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=50)
     password = serializers.CharField(max_length=100, allow_null=True)
     phone_number = serializers.CharField(max_length=20)
-    level = serializers.ChoiceField(choices = [("SA", "Super Admin"), ("A", "Admin"), ("E", "Employee"), ("C", "Customer"),])
+    level = serializers.ChoiceField(choices = [("SA", "Super Admin"), ("A", "Admin"), ("E", "Employee"), ("C", "Customer"),], default = "C")
     status = serializers.BooleanField(default = False)
 
     def create(self, validated_data):
@@ -143,55 +142,38 @@ class PaymentSerializer(serializers.Serializer):
     pk = serializers.IntegerField(read_only=True)
     user = UserSerializer(read_only=True)
     shop = ShopSerializer(read_only=True)
-    payment_type = serializers.ChoiceField(choices = [("CA", "Cash"), ("CR", "Credit"), ("DE", "Debit"), ("O", "Ovo"), ("G", "Gopay"), ("D", "Dana"),])
+    product = ProductSerializer(read_only=True)
+    quantity = serializers.IntegerField()
+    quantity_reject = serializers.IntegerField(default = 0)
     total_price = serializers.IntegerField()
-    payment_date = serializers.DateTimeField()
-    status = serializers.ChoiceField(choices = [("P", "Paid"), ("NP", "Not Paid")])
+    payment_date = serializers.DateTimeField(allow_null=True, required=False)
+    status = serializers.ChoiceField(choices = [("P", "Paid"), ("NP", "Not Paid"), ("R", "Rejected")], default = "NP")
+    created = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
         user_id = self.initial_data.get("user")
         validated_data["user_id"] = user_id
         shop_id = self.initial_data.get("shop")
         validated_data["shop_id"] = shop_id
+        product_id = self.initial_data.get("product")
+        validated_data["product_id"] = product_id
         return Payment.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         user_id = self.initial_data.get("user")
         shop_id = self.initial_data.get("shop")
+        product_id = self.initial_data.get("product")
         if user_id:
             instance.user_id = user_id
         if shop_id:
             instance.shop_id = shop_id
-        instance.payment_type = validated_data.get('payment_type', instance.payment_type)
-        instance.total_price = validated_data.get('total_price', instance.total_price)
-        instance.payment_date = validated_data.get('payment_date', instance.payment_date)
-        instance.status = validated_data.get('status', instance.status)
-        instance.save()
-        return instance
-
-class PaymentDetailSerializer(serializers.Serializer):
-    pk = serializers.IntegerField(read_only=True)
-    payment = PaymentSerializer(read_only=True)
-    product = ProductSerializer(read_only=True)
-    quantity = serializers.IntegerField()
-    price = serializers.IntegerField()
-
-    def create(self, validated_data):
-        payment_id = self.initial_data.get("payment")
-        validated_data["payment_id"] = payment_id
-        product_id = self.initial_data.get("product")
-        validated_data["product_id"] = product_id
-        return PaymentDetail.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        payment_id = self.initial_data.get("payment")
-        product_id = self.initial_data.get("product")
-        if payment_id:
-            instance.payment_id = payment_id
         if product_id:
             instance.product_id = product_id
         instance.quantity = validated_data.get('quantity', instance.quantity)
-        instance.price = validated_data.get('price', instance.price)
+        instance.quantity_reject = validated_data.get('quantity_reject', instance.quantity_reject)
+        instance.total_price = validated_data.get('total_price', instance.total_price)
+        instance.payment_date = validated_data.get('payment_date', instance.payment_date)
+        instance.status = validated_data.get('status', instance.status)
         instance.save()
         return instance
 
@@ -208,13 +190,3 @@ class PaymentDetailSerializer(serializers.Serializer):
             product.stock -= instance.quantity
         product.save()
         return instance
-    
-    def delete(self, *args, **kwargs):
-        # get the product and quantity from the instance
-        product = self.instance.product
-        quantity = self.instance.quantity
-        # increase the product stock by the quantity
-        product.stock += quantity
-        product.save()
-        # call the super method to delete the instance
-        super().delete(*args, **kwargs)
