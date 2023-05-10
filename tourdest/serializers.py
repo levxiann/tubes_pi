@@ -13,7 +13,7 @@ class UserSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=50)
     password = serializers.CharField(max_length=100, allow_null=True)
     phone_number = serializers.CharField(max_length=20)
-    level = serializers.ChoiceField(choices = [("SA", "Super Admin"), ("A", "Admin"), ("E", "Employee"), ("C", "Customer"),])
+    level = serializers.ChoiceField(choices = [("SA", "Super Admin"), ("A", "Admin"), ("E", "Employee"), ("C", "Customer"),], default = "C")
     status = serializers.BooleanField(default = False)
 
     def create(self, validated_data):

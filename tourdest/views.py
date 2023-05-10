@@ -69,6 +69,7 @@ def user_list(request, lev = "all", stat = "all"):
         if request.user.level != "A" and request.user.level != "SA":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         user_data = JSONParser().parse(request)
+        user_data['status'] = False
         user_serializer = UserSerializer(data=user_data)
         if user_serializer.is_valid():
             user = user_serializer.save()
@@ -81,6 +82,7 @@ def user_create(request):
     if request.method == 'POST':
         user_data = JSONParser().parse(request)
         user_data['level'] = 'C'
+        user_data['status'] = False
         user_serializer = UserSerializer(data=user_data)
         if user_serializer.is_valid():
             user = user_serializer.save()
@@ -266,6 +268,8 @@ def shoppos_get(request, shop):
 @permission_classes([IsAuthenticated])
 def shoppos_get_user(request, user):
     if request.method == 'GET':
+        if request.user.level == "C":
+            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         shoppos = ShopPosition.objects.get(user_id = user)
         shoppos_serializer = ShopPositionSerializer(shoppos)
         return JSONResponse(shoppos_serializer.data)
@@ -319,7 +323,7 @@ def shoppos_detail(request, pk):
 def product_list(request, stat = "all", fk = 0):
     if request.method == 'GET':
         if stat == "all":
-            if fk == 0 :
+            if fk == "0" :
                 products = Product.objects.all()
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
@@ -328,7 +332,7 @@ def product_list(request, stat = "all", fk = 0):
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
         elif stat == "true":
-            if fk == 0:
+            if fk == "0":
                 products = Product.objects.all().filter(status = True)
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
@@ -337,7 +341,7 @@ def product_list(request, stat = "all", fk = 0):
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
         elif stat == "false":
-            if fk == 0 :
+            if fk == "0" :
                 products = Product.objects.all().filter(status = False)
                 products_serializer = ProductSerializer(products, many=True)
                 return JSONResponse(products_serializer.data)
@@ -429,6 +433,8 @@ def product_stock(request, pk):
 @permission_classes([IsAuthenticated])
 def payment_list(request, stat = "all"):
     if request.method == 'GET':
+        if request.user.level != "SA":
+            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         if stat == "all":
             payments = Payment.objects.all()
             payments_serializer = PaymentSerializer(payments, many=True)
@@ -447,7 +453,11 @@ def payment_list(request, stat = "all"):
             return JSONResponse(payments_serializer.data)
 
     elif request.method == 'POST':
+        if request.user.level != "C":
+            return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         payment_data = JSONParser().parse(request)
+        payment_data['quantity_reject'] = 0
+        payment_data['status'] = 'NP'
         payment_serializer = PaymentSerializer(data=payment_data)
         if payment_serializer.is_valid():
             payment_serializer.save()
