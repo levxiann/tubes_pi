@@ -242,10 +242,12 @@ class PaymentSerializer(serializers.Serializer):
         if self.instance:
             # apabila data diupdate, stock pada tabel product akan dikurang atau ditambah sesuai dengan data baru
             previous_quantity = self.instance.quantity
+            prev_product = self.instance.product
             instance = super().save()
             product = instance.product
-            quantity_difference = instance.quantity - previous_quantity
-            product.stock -= quantity_difference
+            prev_product.stock += previous_quantity
+            prev_product.save()
+            product.stock -= instance.quantity
         else:
             # apabila data dicreate, stock pada tabel product akan dikurang sesuai dengan jumlah quantity
             instance = super().save()
