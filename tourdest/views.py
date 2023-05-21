@@ -309,7 +309,7 @@ def shoppos_list(request):
     # jika request method GET
     if request.method == 'GET':
         # apabila yang mengakses bukan level admin dan super admin, kembalikan response 403
-        if request.user.level != "A" and request.user.level != "SA":
+        if request.user.level != "SA":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         # ambil data posisi toko dan return dalam bentuk json
         shoppos = ShopPosition.objects.all()
@@ -463,7 +463,7 @@ def product_list(request, stat = "all", fk = 0):
     # jika request method POST
     elif request.method == 'POST':
         # apabila yang mengakses bukan level admin dan super admin, kembalikan response 403
-        if request.user.level != "A" and request.user.level != "SA":
+        if request.user.level != "A":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         # ubah data json menjadi dictionary
         product_data = JSONParser().parse(request)
@@ -501,7 +501,7 @@ def product_detail(request, pk, stat = "all"):
     # jika request method PUT
     elif request.method == 'PUT':
         # apabila yang mengakses bukan level admin dan super admin, kembalikan response 403
-        if request.user.level != "A" and request.user.level != "SA":
+        if request.user.level != "A":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         # ubah data json menjadi dictionary
         product_data = JSONParser().parse(request)
@@ -517,7 +517,7 @@ def product_detail(request, pk, stat = "all"):
     # jika request method PATCH
     elif request.method == 'PATCH':
         # apabila yang mengakses bukan level admin dan super admin, kembalikan response 403
-        if request.user.level != "A" and request.user.level != "SA":
+        if request.user.level != "A":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         # ubah data json menjadi dictionary
         product_data = JSONParser().parse(request)
@@ -533,7 +533,7 @@ def product_detail(request, pk, stat = "all"):
     # Jika request method DELETE
     elif request.method == 'DELETE':
         # apabila yang mengakses bukan level admin dan super admin, kembalikan response 403
-        if request.user.level != "A" and request.user.level != "SA":
+        if request.user.level != "A":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         # hapus data produk
         product.delete()
