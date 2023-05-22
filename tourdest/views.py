@@ -420,6 +420,11 @@ def shoppos_detail(request, pk):
         # apabila yang mengakses bukan level admin dan super admin, kembalikan response 403
         if request.user.level != "A" and request.user.level != "SA":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
+        # tambah stock pada tabel product jika data transaksi dihapus
+        user = shoppos.user
+        user.status = False
+        user.save()
+
         # hapus data
         shoppos.delete()
         return HttpResponse(status=status.HTTP_204_NO_CONTENT)
@@ -462,7 +467,7 @@ def product_list(request, stat = "all", fk = 0):
 
     # jika request method POST
     elif request.method == 'POST':
-        # apabila yang mengakses bukan level admin dan super admin, kembalikan response 403
+        # apabila yang mengakses bukan level admin, kembalikan response 403
         if request.user.level != "A":
             return JSONResponse({'detail': 'You do not have permission to access this resource.'}, status=status.HTTP_403_FORBIDDEN)
         # ubah data json menjadi dictionary
