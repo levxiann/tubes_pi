@@ -93,7 +93,7 @@ class Payment(models.Model):
         ordering = ('-pk',)
 
     # Foreign Key User yang melakukan transaksi
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.RESTRICT)
     # Foreign Key toko tempat dilakukan transaksi
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
     # Foreign Key produk yang dibeli
